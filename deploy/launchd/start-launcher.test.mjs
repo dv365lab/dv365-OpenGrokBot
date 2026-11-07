@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -8,7 +8,7 @@ import { describe, it } from 'node:test'
 
 const launcher = fileURLToPath(new URL('../../启动OpenGrokBot.command', import.meta.url))
 
-function runLauncher({ nodeExit = 0, failStep = '' } = {}) {
+function runLauncher({ nodeExit = 0, failStep = '', noPnpm = false, noNpm = false, npmExit = 0 } = {}) {
   const temp = mkdtempSync(join(tmpdir(), 'opengrokbot-launcher-'))
   const repo = join(temp, '中文 project (one click) & !')
   const bin = join(temp, 'bin')
@@ -19,15 +19,17 @@ function runLauncher({ nodeExit = 0, failStep = '' } = {}) {
     const entry = join(repo, '启动OpenGrokBot.command')
     copyFileSync(launcher, entry)
     chmodSync(entry, 0o755)
-    for (const [name, script] of Object.entries({
-      node: `#!/bin/bash\nexit ${nodeExit}\n`,
-      pnpm: '#!/bin/bash\nprintf "%s:%s\\n" "$PWD" "$*" >> "$COMMANDS"\n[[ "$1" != "$FAIL_STEP" ]] || exit 7\n',
-    })) {
+    symlinkSync('/usr/bin/dirname', join(bin, 'dirname'))
+    const record = 'printf "%s:%s\\n" "$PWD" "$*" >> "$COMMANDS"\n'
+    const scripts = { node: `#!/bin/bash\nexit ${nodeExit}\n` }
+    if (!noPnpm) scripts.pnpm = `#!/bin/bash\n${record}[[ "$1" != "$FAIL_STEP" ]] || exit 7\n`
+    if (!noNpm) scripts.npm = `#!/bin/bash\n${record}[[ "$NPM_EXIT" == 0 ]] || exit "$NPM_EXIT"\nshift 5\n[[ "$1" != "$FAIL_STEP" ]] || exit 7\n`
+    for (const [name, script] of Object.entries(scripts)) {
       writeFileSync(join(bin, name), script, { mode: 0o755 })
     }
     const result = spawnSync(entry, [], {
       cwd: temp,
-      env: { ...process.env, PATH: `${bin}:/usr/bin:/bin`, COMMANDS: commands, FAIL_STEP: failStep },
+      env: { ...process.env, PATH: bin, COMMANDS: commands, FAIL_STEP: failStep, NPM_EXIT: String(npmExit) },
       encoding: 'utf8',
       timeout: 10_000,
     })
@@ -50,6 +52,28 @@ describe('macOS double-click launcher', { skip: process.platform === 'win32' }, 
     const result = runLauncher()
     assert.equal(result.status, 0, result.stderr)
     assert.deepEqual(result.calls, ['install --frozen-lockfile', 'build', 'start'])
+  })
+
+  it('automatically runs pinned pnpm through npm when pnpm is missing', () => {
+    const result = runLauncher({ noPnpm: true })
+    assert.equal(result.status, 0, result.stderr)
+    assert.deepEqual(result.calls, ['install --frozen-lockfile', 'build', 'start'].map(
+      args => `exec --yes --package=pnpm@10.33.2 -- pnpm ${args}`,
+    ))
+  })
+
+  it('explains how to fix missing npm and pnpm', () => {
+    const result = runLauncher({ noPnpm: true, noNpm: true })
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, /npm.*Node.js 22/)
+    assert.deepEqual(result.calls, [])
+  })
+
+  it('stops if the automatic pnpm download fails', () => {
+    const result = runLauncher({ noPnpm: true, npmExit: 9 })
+    assert.equal(result.status, 9)
+    assert.match(result.stderr, /Dependency installation failed/)
+    assert.equal(result.calls.length, 1)
   })
 
   it('rejects unsupported Node before installing dependencies', () => {

@@ -200,10 +200,12 @@ Details in [docs/local-computers.md](docs/local-computers.md).
 To keep it running — one process, one port, started at boot, reachable through a tunnel — `pnpm build &&
 pnpm start` and the launchd / systemd / Windows Task Scheduler templates in [docs/always-on.md](docs/always-on.md).
 
-**macOS double-click launcher:** with Node.js 22+ and pnpm installed, double-click
+**macOS double-click launcher:** with Node.js 22+ (including npm) installed, double-click
 [`启动OpenGrokBot.command`](启动OpenGrokBot.command) in Finder. It changes to the project directory,
 installs dependencies, builds, and starts the gateway (port 4747 by default). Open the sign-in link
-printed in Terminal; keep the window open and press `Ctrl+C` to stop. The first install needs internet.
+printed in Terminal; keep the window open and press `Ctrl+C` to stop. If pnpm is missing, the launcher
+uses npm to download and run the pinned pnpm version automatically, without sudo or a global install.
+The first pnpm download and dependency install need internet access.
 Errors remain visible until you press Enter. If executable permission is missing, run
 `chmod +x 启动OpenGrokBot.command` in the project directory. Model settings use the launching terminal's
 `OPENGROKBOT_*` environment; Finder may not inherit exports from other terminals. To use those exports,
