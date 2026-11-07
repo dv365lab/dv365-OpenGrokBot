@@ -67,6 +67,7 @@ export type AgentDeps = {
   onStopRoutine?: (id: number) => Promise<{ ok: boolean; name?: string; reason?: string }>
   hop?: number
   group?: { title: string; members: string[] }
+  onTeamStatus?: () => unknown
   onMessageBot?: (input: { to: string; content: string }) =>
     Promise<{ delivered: boolean; reason?: string; toName?: string }>
   onAskForLogin?: (input: { site: string; why: string }) => Promise<void>
@@ -157,7 +158,7 @@ export async function runTurn(
     const timeZone = deps.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
     const messages = withTimeNote(history, timeNote(now, timeZone))
     const hasSkills = Boolean(deps.skills?.length && deps.onReadSkill)
-    const tools = buildTools({ hasComputer, canRelay, hasSkills, watch: deps.watch === true, shell: deps.computer?.shell, kind: deps.computer?.kind })
+    const tools = buildTools({ hasComputer, canRelay, hasSkills, hasTeamStatus: Boolean(deps.onTeamStatus), watch: deps.watch === true, shell: deps.computer?.shell, kind: deps.computer?.kind })
     const maxSteps = deps.maxSteps && deps.maxSteps > 0 ? Math.floor(deps.maxSteps) : DEFAULT_MAX_STEPS
     const turnMs = deps.turnTimeoutMs ?? DEFAULT_TURN_MS
     const startedAt = Date.now()
@@ -349,6 +350,14 @@ async function execToolCall(deps: TurnContext, call: ToolCall, events: AgentEven
     const text = execMessageUser(deps, args, events)
     log(text === 'Report delivered.')
     return { text }
+  }
+  if (call.name === 'get_team_status') {
+    if (!deps.onTeamStatus) { log(false); return { text: 'Team status access is not enabled for this bot.' } }
+    try {
+      const text = sliceForModel(JSON.stringify(deps.onTeamStatus()), args, 'get_team_status', 'team status')
+      log(true)
+      return { text }
+    } catch (err) { return failed(err) }
   }
   if (call.name === 'read_skill') {
     try {

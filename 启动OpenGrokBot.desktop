@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=启动 OpenGrokBot
+Name[en_US]=Start OpenGrokBot
+Comment=启动服务并打开网页；已运行时不重启
+Exec=/home/icer/try/OpenGrokBot/deploy/linux/start-desktop.sh
+Path=/home/icer/try/OpenGrokBot
+Icon=applications-internet
+Terminal=true
+Categories=Development;
+StartupNotify=false

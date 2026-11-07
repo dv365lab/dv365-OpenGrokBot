@@ -24,6 +24,7 @@ export type BotRow = {
   emoji: string
   soul_path: string
   /** 本机电脑上允许跑命令（1）；容器电脑不看这个字段 */
+  archived?: number
   shell_enabled?: number
 }
 
@@ -169,6 +170,8 @@ const MIGRATIONS: Migration[] = [
   `),
 ]
 
+MIGRATIONS.push((db) => db.exec('ALTER TABLE bots ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;'))
+
 export const SCHEMA_VERSION = MIGRATIONS.length
 
 export function schemaVersion(db: Db): number {
@@ -306,7 +309,7 @@ export function listMessages(db: Db, threadId: string, limit = 200): MessageRow[
 }
 
 export function listBotsWithLastMessage(db: Db): SidebarBot[] {
-  const bots = db.prepare(`SELECT * FROM bots ORDER BY name`).all() as BotRow[]
+  const bots = db.prepare(`SELECT * FROM bots WHERE archived = 0 ORDER BY name`).all() as BotRow[]
   const lastStmt = db.prepare(`SELECT * FROM messages WHERE thread_id = ? ORDER BY id DESC LIMIT 1`)
   return bots.map((b) => {
     const threadId = `dm:${b.id}`
@@ -402,7 +405,7 @@ export function waitsOnOperator(db: Db, botId: string): boolean {
 }
 
 export function listConversations(db: Db): Conversation[] {
-  const bots = db.prepare('SELECT * FROM bots ORDER BY name').all() as BotRow[]
+  const bots = db.prepare('SELECT * FROM bots WHERE archived = 0 ORDER BY name').all() as BotRow[]
   const byId = new Map(bots.map((b) => [b.id, b]))
   const pending = pendingByThread(db)
   const dms: Conversation[] = bots.map((b) => ({
@@ -418,7 +421,7 @@ export function listConversations(db: Db): Conversation[] {
   const groupRows = db.prepare(`SELECT * FROM threads WHERE kind = 'group' ORDER BY title`)
     .all() as { id: string; title: string }[]
   const groups: Conversation[] = groupRows.map((t) => {
-    const members = threadMembers(db, t.id)
+    const members = threadMembers(db, t.id).filter((id) => byId.has(id))
     return {
       id: t.id,
       kind: 'group',

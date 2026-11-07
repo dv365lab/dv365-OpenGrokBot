@@ -25,6 +25,21 @@ describe('canMessage', () => {
     expect(canMessage(rules, 'inbox-keeper', 'researcher')).toBe(false)
   })
 
+  it('explicit wildcard allows existing and future peers in both directions', () => {
+    const all = parseA2AAllow('  *  ', 'chief')
+    for (const [from, to] of [['dv-manager', 'dv-01'], ['dv-01', 'dv-manager'], ['new-bot', 'future-bot']]) {
+      expect(canMessage(all, from!, to!)).toBe(true)
+    }
+    expect(canMessage(all, 'new-bot', 'new-bot')).toBe(false)
+    expect(canMessage(all, '', 'new-bot')).toBe(false)
+    expect(canMessage(all, 'new-bot', '')).toBe(false)
+  })
+
+  it('supports wildcard alongside directed pairs without changing defaults', () => {
+    expect(canMessage(parseA2AAllow('a>b, *, junk', 'chief'), 'c', 'd')).toBe(true)
+    expect(canMessage(parseA2AAllow('', 'chief'), 'c', 'd')).toBe(false)
+  })
+
   it('never lets a bot message itself', () => {
     expect(canMessage(rules, 'chief', 'chief')).toBe(false)
     expect(canMessage(rules, 'researcher', 'researcher')).toBe(false)

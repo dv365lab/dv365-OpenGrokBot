@@ -102,8 +102,8 @@ Docker 时，就是你 Mac 或 Linux 机器上它自己的浏览器和文件夹�
 命令行的同事，请给它一台 Docker 电脑。
 
 ```bash
-git clone https://github.com/wolfqing/OpenGrokBot.git
-cd OpenGrokBot
+git clone https://github.com/dv365lab/dv365-OpenGrokBot.git
+cd dv365-OpenGrokBot
 pnpm install
 ```
 
@@ -144,7 +144,7 @@ Linux 用 bubblewrap），只能写这位同事自己的文件夹。Windows 没�
 | `OPENGROKBOT_COMPUTERS` | `auto` | `docker`、`local`，或 `auto`（Docker 在跑就用 Docker，否则本机） |
 | `OPENGROKBOT_BROWSER` | *(自动找)* | 本机电脑用的浏览器；不填就找 Chrome / Edge / Chromium，都没有就下载一个 |
 | `OPENGROKBOT_BROWSER_MIRROR` | *(官方)* | 下载那个浏览器用的镜像主机，国内网络用 |
-| `OPENGROKBOT_A2A_ALLOW` | *(空)* | 同级交接，如 `researcher>market-watch` |
+| `OPENGROKBOT_A2A_ALLOW` | *(空)* | 同级交接，如 `researcher>market-watch`；设为 `*` 允许所有现有和未来 bot 互通，仍禁止自发消息并限制转发跳数 |
 | `OPENGROKBOT_DAILY_TOKENS` | `0`（不限） | 每位同事每天的 token 预算 |
 | `OPENGROKBOT_VISION` | *(关)* | 把截图喂回给模型看 |
 

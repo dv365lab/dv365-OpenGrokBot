@@ -24,6 +24,53 @@ describe('createLLM (openai-compatible)', () => {
     expect(turn.content).toBeNull()
   })
 
+  it('uses Responses for GPT-6.1 on OpenAI only', async () => {
+    for (const [baseURL, model, tools, expected] of [
+      ['https://api.openai.com/v1', 'gpt-6.1-sol', toolDefs, true],
+      ['https://api.openai.com/v1', 'gpt-6.1-sol', [], true],
+      ['https://api.openai.com/v1', 'other-model', toolDefs, false],
+      ['https://api.x.ai/v1', 'gpt-6.1-sol', toolDefs, false],
+    ] as const) {
+      let body: Record<string, unknown> = {}
+      const fakeFetch = (async (_url, init) => {
+        body = JSON.parse(init!.body as string)
+        return new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'OK' } }] }))
+      }) as typeof fetch
+      const llm = createLLM(loadConfig({ OPENGROKBOT_API_BASE: baseURL, OPENGROKBOT_MODEL: model }), fakeFetch)
+      await llm.chat([{ role: 'user', content: 'hi' }], [...tools])
+      expect('input' in body).toBe(expected)
+      expect(body.reasoning_effort).toBeUndefined()
+    }
+  })
+
+  it('maps Responses tool history, output and usage', async () => {
+    let body: Record<string, any> = {}
+    const fakeFetch = (async (url, init) => {
+      expect(String(url)).toBe('https://api.openai.com/v1/responses')
+      body = JSON.parse(init!.body as string)
+      return new Response(JSON.stringify({
+        output: [
+          { type: 'function_call', call_id: 'call_new', name: 'message_user', arguments: '{"ok":true}' },
+          { type: 'message', content: [{ type: 'output_text', text: 'Done' }] },
+        ],
+        usage: { input_tokens: 10, output_tokens: 5, input_tokens_details: { cached_tokens: 2 } },
+      }))
+    }) as typeof fetch
+    const llm = createLLM(loadConfig({ OPENGROKBOT_API_BASE: 'https://api.openai.com/v1', OPENGROKBOT_MODEL: 'gpt-6.1-sol' }), fakeFetch)
+    const result = await llm.chat([
+      { role: 'user', content: 'hi' },
+      { role: 'assistant', content: null, tool_calls: [{ id: 'call_old', function: { name: 'message_user', arguments: '{}' } }] },
+      { role: 'tool', tool_call_id: 'call_old', content: 'OK' },
+    ], toolDefs)
+    expect(body.store).toBe(false)
+    expect(body.tools[0]).toEqual({ type: 'function', name: 'message_user', parameters: {}, strict: false })
+    expect(body.input[1]).toEqual({ type: 'function_call', call_id: 'call_old', name: 'message_user', arguments: '{}' })
+    expect(body.input[2]).toEqual({ type: 'function_call_output', call_id: 'call_old', output: 'OK' })
+    expect(result.toolCalls).toEqual([{ id: 'call_new', name: 'message_user', args: { ok: true } }])
+    expect(result.content).toBe('Done')
+    expect(result.usage).toEqual({ prompt: 10, completion: 5, cached: 2 })
+  })
+
   it('throws readable error on non-200', async () => {
     const fakeFetch = (async () => new Response('quota exceeded', { status: 429 })) as typeof fetch
     const llm = createLLM(loadConfig({}), fakeFetch, async () => {})

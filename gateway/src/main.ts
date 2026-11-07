@@ -98,7 +98,7 @@ schedulerBox.current = createScheduler({
     }
   },
 })
-schedulerBox.current.load(listRoutines(db))
+schedulerBox.current.load(listRoutines(db).filter((r) => db.prepare('SELECT 1 FROM bots WHERE id = ? AND archived = 0').get(r.bot_id)))
 
 // 动作日志留 90 天：启动时清一次，之后每天清一次
 const ACTION_LOG_DAYS = 90
@@ -119,7 +119,7 @@ app.get('/ws', upgradeWebSocket(() => ({
 })))
 
 // 屏幕：noVNC 页面和它的 WebSocket 都经网关转发——同源、同一个登录，一条隧道就能远程接管
-const knownBot = (botId: string) => Boolean(db.prepare('SELECT 1 FROM bots WHERE id = ?').get(botId))
+const knownBot = (botId: string) => Boolean(db.prepare('SELECT 1 FROM bots WHERE id = ? AND archived = 0').get(botId))
 const viewers = createScreenViewers()
 app.get('/vnc/:botId/websockify', upgradeWebSocket(async (c) => {
   const botId = c.req.param('botId') ?? ''

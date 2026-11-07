@@ -117,8 +117,8 @@ Linux and Windows; on Windows they get the browser and the folder but no command
 shell there gets a Docker computer.
 
 ```bash
-git clone https://github.com/wolfqing/OpenGrokBot.git
-cd OpenGrokBot
+git clone https://github.com/dv365lab/dv365-OpenGrokBot.git
+cd dv365-OpenGrokBot
 pnpm install
 ```
 

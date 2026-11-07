@@ -55,13 +55,34 @@ function toWire(m: ChatMsg): Record<string, unknown> {
 
 export function createLLM(config: Config, fetchImpl: typeof fetch = fetch, sleep: Sleep = realSleep): LLM {
   if (config.model === 'stub') return createStubLLM()
-  const url = `${config.baseURL.replace(/\/$/, '')}/chat/completions`
+  const useResponses = /^gpt-6\.1(?:-|$)/.test(config.model) && new URL(config.baseURL).hostname === 'api.openai.com'
+  const url = `${config.baseURL.replace(/\/$/, '')}/${useResponses ? 'responses' : 'chat/completions'}`
   return {
     async chat(messages, tools, opts = {}) {
       const body = JSON.stringify({
         model: config.model,
-        messages: messages.map(toWire),
-        ...(tools.length ? { tools } : {}),
+        ...(useResponses ? {
+          store: false,
+          input: messages.flatMap((m): Record<string, unknown>[] => {
+            if (m.role === 'tool') return [{ type: 'function_call_output', call_id: m.tool_call_id, output: m.content ?? '' }]
+            const items: Record<string, unknown>[] = []
+            if (m.content !== null) {
+              items.push({ role: m.role, content: m.images?.length ? [
+                { type: 'input_text', text: m.content },
+                ...m.images.map((url) => ({ type: 'input_image', image_url: url })),
+              ] : m.content })
+            }
+            for (const call of m.tool_calls ?? []) {
+              const t = call as { id: string; function: { name: string; arguments: string } }
+              items.push({ type: 'function_call', call_id: t.id, name: t.function.name, arguments: t.function.arguments })
+            }
+            return items
+          }),
+          ...(tools.length ? { tools: tools.map((t) => ({ type: 'function', ...t.function, strict: false })) } : {}),
+        } : {
+          messages: messages.map(toWire),
+          ...(tools.length ? { tools } : {}),
+        }),
         ...(tools.length && opts.toolChoice ? { tool_choice: opts.toolChoice } : {}),
       })
       type WireToolCall = { id: string; function?: { name?: string; arguments?: string } }
@@ -93,7 +114,23 @@ export function createLLM(config: Config, fetchImpl: typeof fetch = fetch, sleep
             }
             throw new ProviderError(`LLM API ${res.status}: ${detail}`)
           }
-          data = (await res.json()) as WireResponse
+          if (useResponses) {
+            const response = await res.json() as {
+              output?: Array<{ type: string; call_id?: string; name?: string; arguments?: string; content?: Array<{ type: string; text?: string }> }>
+              usage?: { input_tokens: number; output_tokens: number; input_tokens_details?: { cached_tokens?: number } }
+            }
+            const output = response.output ?? []
+            data = {
+              choices: [{ message: {
+                role: 'assistant',
+                content: output.filter((o) => o.type === 'message').flatMap((o) => o.content ?? []).filter((c) => c.type === 'output_text').map((c) => c.text ?? '').join('') || null,
+                tool_calls: output.filter((o) => o.type === 'function_call').map((o) => ({ id: o.call_id!, type: 'function', function: { name: o.name, arguments: o.arguments } })),
+              } }],
+              ...(response.usage ? { usage: { prompt_tokens: response.usage.input_tokens, completion_tokens: response.usage.output_tokens, prompt_tokens_details: response.usage.input_tokens_details } } : {}),
+            }
+          } else {
+            data = (await res.json()) as WireResponse
+          }
           break
         } catch (err) {
           if (err instanceof ProviderError) throw err

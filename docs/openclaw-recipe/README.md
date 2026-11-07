@@ -25,8 +25,8 @@ config with three ready-to-work teammates plus agent-to-agent messaging enabled.
 OpenClaw config — it generated a merge file instead.
 
 ```bash
-git clone https://github.com/wolfqing/OpenGrokBot.git
-cd OpenGrokBot
+git clone https://github.com/dv365lab/dv365-OpenGrokBot.git
+cd dv365-OpenGrokBot
 docs/openclaw-recipe/setup.sh
 
 openclaw onboard --install-daemon   # first-time setup

@@ -5,6 +5,7 @@ import {
   updateRoutine,
 } from './api'
 import { ComputerPanel } from './components/ComputerPanel'
+import { BotManager } from './components/BotManager'
 import { NewBotForm } from './components/NewBotForm'
 import { Sidebar } from './components/Sidebar'
 import { Thread } from './components/Thread'
@@ -37,6 +38,7 @@ export default function App() {
   /** 电脑面板开给谁；info 为 null 表示那台电脑还在醒 */
   const [panel, setPanel] = useState<{ botId: string; info: ComputerInfo | null } | null>(null)
   const [hiring, setHiring] = useState(false)
+  const [managing, setManaging] = useState(false)
   const [hireError, setHireError] = useState<string | undefined>()
 
   const selected = useMemo(
@@ -92,7 +94,7 @@ export default function App() {
   const refreshConversations = useCallback(async () => {
     const cs = await fetchConversations()
     setConversations(cs)
-    setSelectedId((id) => id ?? cs[0]?.id ?? null)
+    setSelectedId((id) => cs.some((c) => c.id === id) ? id : cs[0]?.id ?? null)
   }, [])
 
   const loadRoster = useCallback(async () => {
@@ -291,6 +293,8 @@ export default function App() {
           onShell={onShell}
         />
       ) : null}
+      <button style={{ position: 'fixed', bottom: 12, left: 12, zIndex: 20 }} onClick={() => setManaging(true)}>管理 bot</button>
+      {managing && <BotManager onClose={() => setManaging(false)} onChanged={() => { void resync(); showPanel(null) }} />}
       {hiring ? (
         <div className="modal-scrim" onClick={() => setHiring(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>

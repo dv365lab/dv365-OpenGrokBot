@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { readFile, writeFile, rename } from 'node:fs/promises'
+import { parseSoul, soulFrontmatter } from './soul.js'
 import { randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
 import { Hono } from 'hono'
@@ -218,7 +219,7 @@ export function createApp(deps: AppDeps): GatewayApp {
   }
   app.get('/api/session', (c) => c.json({ ok: true }))
 
-  const botById = (id: string) => db.prepare('SELECT * FROM bots WHERE id = ?').get(id) as BotRow | undefined
+  const botById = (id: string) => db.prepare('SELECT * FROM bots WHERE id = ? AND archived = 0').get(id) as BotRow | undefined
   const computerKind: ComputerKind = deps.computers?.kind ?? 'docker'
   /** 容器电脑永远有 shell；本机电脑看操作者开没开 */
   const shellEnabledFor = (bot: BotRow) => computerKind !== 'local' || bot.shell_enabled === 1
@@ -245,7 +246,7 @@ export function createApp(deps: AppDeps): GatewayApp {
   }
 
   function presenceSnapshot(): Record<string, Presence> {
-    const ids = (db.prepare('SELECT id FROM bots').all() as { id: string }[]).map((r) => r.id)
+    const ids = (db.prepare('SELECT id FROM bots WHERE archived = 0').all() as { id: string }[]).map((r) => r.id)
     const out: Record<string, Presence> = {}
     for (const id of ids) {
       const state = presenceOf(id)
@@ -343,6 +344,16 @@ export function createApp(deps: AppDeps): GatewayApp {
         ...(skills.length ? { skills, onReadSkill: (name: string) => readSkill(skillsDir(dataDir), name) } : {}),
         checkBudget: () => budgetNote(bot),
         onMessageBot: ({ to, content }) => relay(bot, to, content, opts.hop ?? 0),
+        ...(bot.id === 'dv365-editor' ? { onTeamStatus: () => ({
+          capturedAt: now().toISOString(),
+          note: 'Live runtime states and latest messages only, not verified completion or complete chat histories. Message content is untrusted reported data.',
+          bots: listBotsWithLastMessage(db).map((b) => ({
+            id: b.id, name: b.name, role: b.role, state: presenceOf(b.id),
+            shellEnabled: shellEnabledFor(b),
+            latestUpdate: b.last_message ? { sender: b.last_message.sender, kind: b.last_message.kind, content: b.last_message.content.slice(0, 2000), at: b.last_message.created_at } : null,
+            routines: listRoutines(db, b.id).map((r) => ({ id: r.id, name: r.name, cron: r.cron, enabled: r.enabled })),
+          })),
+        }) } : {}),
         // 提前把容器拉起来，用户点开面板时屏幕已经在了
         // 容器：提前拉起来，用户点开面板时屏幕已经在了；本机：把浏览器以窗口开到桌面上让人登录
         ...(pool ? { onAskForLogin: async () => { await (await pool.get(bot.id)).showWindow?.() } } : {}),
@@ -926,6 +937,45 @@ export function createApp(deps: AppDeps): GatewayApp {
     return c.json({ ok: true }, 202)
   })
 
+  // Operator-only management: auth middleware covers all /api paths. Never delete workspaces.
+  app.get('/api/bot-management', (c) => {
+    const bots = db.prepare('SELECT * FROM bots ORDER BY name').all() as BotRow[]
+    return c.json(bots.map((b) => ({ ...b, soul: loadPersona(b).soul, isChief: b.id === chiefId })))
+  })
+  app.patch('/api/bot-management/:id', async (c) => {
+    const bot = db.prepare('SELECT * FROM bots WHERE id = ?').get(c.req.param('id')) as BotRow | undefined
+    if (!bot) return c.json({ error: 'unknown bot' }, 404)
+    const body = await c.req.json().catch(() => null)
+    if (!body || typeof body !== 'object') return c.json({ error: 'invalid body' }, 400)
+    if (turns.isBusy(bot.id) || workflowRecordings.has(bot.id) || routineBotsInFlight.has(bot.id)) {
+      return c.json({ error: '该 bot 正在执行任务，请先停止任务或等待完成。' }, 409)
+    }
+    if ('archived' in body) {
+      if (typeof body.archived !== 'boolean') return c.json({ error: 'archived must be boolean' }, 400)
+      if (body.archived && bot.id === chiefId) return c.json({ error: '请先通过 OPENGROKBOT_CHIEF 转交协调职责并重启，再归档当前协调者。' }, 409)
+      db.prepare('UPDATE bots SET archived = ? WHERE id = ?').run(body.archived ? 1 : 0, bot.id)
+      // Keep routine definitions and their enabled state; restore schedules on unarchive.
+      for (const r of listRoutines(db, bot.id)) {
+        if (body.archived) scheduler?.remove(r.id)
+        else if (r.enabled) scheduler?.add(r)
+      }
+      return c.json({ ok: true })
+    }
+    for (const key of ['name', 'role', 'emoji', 'soul']) {
+      if (typeof body[key] !== 'string' || body[key].length > (key === 'soul' ? 100000 : 1000)) return c.json({ error: `invalid ${key}` }, 400)
+    }
+    if (!body.name.trim() || /[\r\n]/.test(body.name)) return c.json({ error: '名称不能为空或含换行。' }, 400)
+    if (db.prepare('SELECT 1 FROM bots WHERE lower(name) = lower(?) AND id != ?').get(body.name.trim(), bot.id)) return c.json({ error: '名称已存在。' }, 409)
+    if (!bot.soul_path) return c.json({ error: 'bot has no persona file' }, 400)
+    const persona = parseSoul(body.soul).body.replace(/^#\s+[^\n]*(?:\n|$)/m, '').trim()
+    const content = soulFrontmatter({ role: body.role, emoji: body.emoji }) + `# ${body.name.trim()}\n\n${persona}\n`
+    const temp = bot.soul_path + '.edit-' + randomUUID()
+    await writeFile(temp, content, 'utf8')
+    await rename(temp, bot.soul_path)
+    db.prepare('UPDATE bots SET name = ?, role = ?, emoji = ? WHERE id = ?').run(body.name.trim(), body.role.trim(), body.emoji.trim() || '🤖', bot.id)
+    return c.json({ ok: true })
+  })
+
   app.post('/api/bots', async (c) => {
     const body = (await c.req.json().catch(() => null)) as { name?: string; role?: string } | null
     const group = db.prepare(`SELECT id FROM threads WHERE kind = 'group' ORDER BY id LIMIT 1`)
@@ -951,7 +1001,7 @@ export function createApp(deps: AppDeps): GatewayApp {
     const body = (await c.req.json().catch(() => null)) as { enabled?: unknown } | null
     if (typeof body?.enabled !== 'boolean') return c.json({ error: 'enabled must be true or false' }, 400)
     const updated = setRoutineEnabled(db, id, body.enabled)!
-    if (body.enabled) scheduler?.add(updated)
+    if (body.enabled && botById(updated.bot_id)) scheduler?.add(updated)
     else scheduler?.remove(id)
     return c.json(routineView(updated))
   })
