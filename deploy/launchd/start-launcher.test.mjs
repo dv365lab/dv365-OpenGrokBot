@@ -21,9 +21,10 @@ function runLauncher({ nodeExit = 0, failStep = '', noPnpm = false, noNpm = fals
     chmodSync(entry, 0o755)
     symlinkSync('/usr/bin/dirname', join(bin, 'dirname'))
     const record = 'printf "%s:%s\\n" "$PWD" "$*" >> "$COMMANDS"\n'
+    const checkRetry = 'if [[ "$1" == start && "$OPENGROKBOT_PORT_RETRY" != 1 ]]; then exit 99; fi\n'
     const scripts = { node: `#!/bin/bash\nexit ${nodeExit}\n` }
-    if (!noPnpm) scripts.pnpm = `#!/bin/bash\n${record}[[ "$1" != "$FAIL_STEP" ]] || exit 7\n`
-    if (!noNpm) scripts.npm = `#!/bin/bash\n${record}[[ "$NPM_EXIT" == 0 ]] || exit "$NPM_EXIT"\nshift 5\n[[ "$1" != "$FAIL_STEP" ]] || exit 7\n`
+    if (!noPnpm) scripts.pnpm = `#!/bin/bash\n${record}${checkRetry}[[ "$1" != "$FAIL_STEP" ]] || exit 7\n`
+    if (!noNpm) scripts.npm = `#!/bin/bash\n${record}[[ "$NPM_EXIT" == 0 ]] || exit "$NPM_EXIT"\nshift 5\n${checkRetry}[[ "$1" != "$FAIL_STEP" ]] || exit 7\n`
     for (const [name, script] of Object.entries(scripts)) {
       writeFileSync(join(bin, name), script, { mode: 0o755 })
     }

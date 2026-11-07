@@ -37,5 +37,7 @@ STEP='Project build'
 printf '[2/3] Building the project…\n'
 "${PNPM[@]}" build
 STEP='Gateway startup'
+# Retry occupied ports in the gateway itself, so there is no probe/bind race.
+export OPENGROKBOT_PORT_RETRY=1
 printf '[3/3] Starting OpenGrokBot. Press Ctrl+C to stop.\n'
 "${PNPM[@]}" start

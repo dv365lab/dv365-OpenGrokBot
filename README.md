@@ -202,7 +202,9 @@ pnpm start` and the launchd / systemd / Windows Task Scheduler templates in [doc
 
 **macOS double-click launcher:** with Node.js 22+ (including npm) installed, double-click
 [`启动OpenGrokBot.command`](启动OpenGrokBot.command) in Finder. It changes to the project directory,
-installs dependencies, builds, and starts the gateway (port 4747 by default). Open the sign-in link
+installs dependencies, builds, and starts the gateway (starting at `OPENGROKBOT_PORT`, or 4747 by default).
+Occupied ports are retried sequentially until binding succeeds; after 65535 the OS allocates a free port.
+Existing services are left running. Open the final sign-in link
 printed in Terminal; keep the window open and press `Ctrl+C` to stop. If pnpm is missing, the launcher
 uses npm to download and run the pinned pnpm version automatically, without sudo or a global install.
 The first pnpm download and dependency install need internet access.

@@ -12,6 +12,7 @@ import { botShellEnabled, openDb } from './db.js'
 import { createLLM } from './llm.js'
 import { migrateLegacyMemories } from './memory.js'
 import { createPool, reapIdleComputers } from './pool.js'
+import { retryOccupiedPort } from './port-retry.js'
 import { listRoutines } from './routines.js'
 import { createScreenViewers, mountScreenProxy, screenRelay, screencastRelay } from './screen.js'
 import { detectSandbox, sandboxHint, sandboxSelfCheck } from './sandbox.js'
@@ -143,7 +144,7 @@ mountScreenProxy(app, { knownBot })
 // pnpm build 之后网关直接托管前端：一个端口、一个进程；dev 下前端走 Vite（5173）
 const servingWeb = serveWeb(app, config.webDist)
 
-serve({
+const server = serve({
   fetch: app.fetch,
   port: config.port,
   hostname: config.host,
@@ -162,6 +163,11 @@ serve({
     console.log(`[gateway] sign in → ${base}/auth?token=${token}`)
   }
 })
+
+// Enabled by the macOS launcher only; fixed-port deployments keep fail-fast behavior.
+if (process.env.OPENGROKBOT_PORT_RETRY === '1') {
+  retryOccupiedPort(server, { port: config.port, host: config.host, log: console.log })
+}
 
 // 空闲的电脑停机省内存；登录态和文件都在 workspace 里，下次用时原样拉起
 if (config.idleStopMinutes > 0) {

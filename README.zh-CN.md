@@ -137,7 +137,8 @@ Linux 用 bubblewrap），只能写这位同事自己的文件夹。Windows 没�
 
 **macOS 双击启动：** 安装 Node.js 22+（含 npm）后，在 Finder 中双击根目录的
 [`启动OpenGrokBot.command`](启动OpenGrokBot.command)。脚本自动进入项目目录、安装依赖、构建并启动服务
-（默认端口 4747）。打开终端中打印的登录链接即可使用；保持窗口打开，按 `Ctrl+C` 停止。
+（从 `OPENGROKBOT_PORT` 指定端口或默认 4747 开始）。端口被占用时会自动尝试下一个端口，直到绑定成功；
+到达 65535 后由系统分配空闲端口，不会停止已有服务。打开终端中打印的最终登录链接即可使用；保持窗口打开，按 `Ctrl+C` 停止。
 无需手动安装 pnpm：未安装时会通过 npm 自动下载并运行项目指定的 pnpm 版本，不需要 sudo 或全局安装。
 首次下载 pnpm 和安装依赖需要联网；失败时会显示错误并等待回车。若提示没有执行权限，在项目目录运行
 `chmod +x 启动OpenGrokBot.command`。模型配置沿用启动终端的 `OPENGROKBOT_*` 环境变量；
