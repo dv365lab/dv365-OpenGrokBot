@@ -200,6 +200,14 @@ Details in [docs/local-computers.md](docs/local-computers.md).
 To keep it running — one process, one port, started at boot, reachable through a tunnel — `pnpm build &&
 pnpm start` and the launchd / systemd / Windows Task Scheduler templates in [docs/always-on.md](docs/always-on.md).
 
+**Windows double-click launcher:** with Node.js 22+ and pnpm installed, double-click
+[`启动OpenGrokBot.bat`](启动OpenGrokBot.bat) in the repository root. It changes to the project directory and runs
+`pnpm install --frozen-lockfile`, `pnpm build`, then `pnpm start`. The gateway serves both the UI and API on
+port 4747 by default. Keep the console open and open the sign-in link it prints; press `Ctrl+C` to stop.
+Failures leave the error visible until you press a key. The first dependency install needs internet access.
+The launcher inherits your Windows user `OPENGROKBOT_*` environment variables; for an offline trial, run
+`setx OPENGROKBOT_MODEL stub` in PowerShell before double-clicking it.
+
 | Variable | Default | What it does |
 |---|---|---|
 | `OPENGROKBOT_API_BASE` | `https://api.x.ai/v1` | Any OpenAI-compatible endpoint |

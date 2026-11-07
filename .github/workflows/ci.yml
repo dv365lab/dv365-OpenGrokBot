@@ -24,6 +24,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: Windows double-click launcher
+        if: runner.os == 'Windows'
+        run: node --test deploy/windows/start-launcher.test.mjs
       - name: Windows start-up scripts parse, install and uninstall
         if: runner.os == 'Windows'
         shell: pwsh

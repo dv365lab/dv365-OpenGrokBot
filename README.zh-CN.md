@@ -135,6 +135,14 @@ Linux 用 bubblewrap），只能写这位同事自己的文件夹。Windows 没�
 想让它常驻——一个进程、一个端口、开机自启、经隧道远程访问——用 `pnpm build && pnpm start`，以及
 [docs/always-on.md](docs/always-on.md) 里的 launchd / systemd / Windows 计划任务模板。
 
+**Windows 双击启动：** 安装 Node.js 22+ 和 pnpm 后，双击根目录的
+[`启动OpenGrokBot.bat`](启动OpenGrokBot.bat)。脚本自动进入项目目录，依次执行
+`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`，前后端统一由网关提供服务
+（默认端口 4747）。保持控制台打开，打开其中打印的登录链接即可使用；按 `Ctrl+C` 停止。
+任何步骤失败都会显示错误并等待按键，便于排查。首次安装依赖需要联网。
+模型配置沿用 `OPENGROKBOT_*` 环境变量；双击启动会继承 Windows 用户环境变量，
+可先在 PowerShell 执行 `setx OPENGROKBOT_MODEL stub`，然后双击脚本进行离线试用。
+
 | 环境变量 | 默认值 | 作用 |
 |---|---|---|
 | `OPENGROKBOT_API_BASE` | `https://api.x.ai/v1` | 任何 OpenAI 兼容端点 |
