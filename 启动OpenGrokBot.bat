@@ -36,7 +36,7 @@ if errorlevel 1 goto :failed
 
 set "STEP=Gateway startup"
 echo [3/3] Starting OpenGrokBot. Press Ctrl+C to stop.
-call pnpm start
+call node deploy\windows\start-desktop.mjs
 if errorlevel 1 goto :failed
 
 popd

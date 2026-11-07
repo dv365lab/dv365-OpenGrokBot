@@ -215,8 +215,10 @@ run `./启动OpenGrokBot.command` from your configured terminal instead.
 
 **Windows double-click launcher:** with Node.js 22+ and pnpm installed, double-click
 [`启动OpenGrokBot.bat`](启动OpenGrokBot.bat) in the repository root. It changes to the project directory and runs
-`pnpm install --frozen-lockfile`, `pnpm build`, then `pnpm start`. The gateway serves both the UI and API on
-port 4747 by default. Keep the console open and open the sign-in link it prints; press `Ctrl+C` to stop.
+`pnpm install --frozen-lockfile`, `pnpm build`, then starts the gateway serving both the UI and API.
+It starts with port 4747 (or `OPENGROKBOT_PORT`) and tries each following port if occupied, until startup
+succeeds or port 65535 is reached. Existing processes keep running. Keep the console open and use the actual
+sign-in link it prints; press `Ctrl+C` to stop.
 Failures leave the error visible until you press a key. The first dependency install needs internet access.
 The launcher inherits your Windows user `OPENGROKBOT_*` environment variables; for an offline trial, run
 `setx OPENGROKBOT_MODEL stub` in PowerShell before double-clicking it.

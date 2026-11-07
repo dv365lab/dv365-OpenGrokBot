@@ -146,8 +146,9 @@ Finder 不一定继承其他终端里的临时变量，需要指定模型时可�
 
 **Windows 双击启动：** 安装 Node.js 22+ 和 pnpm 后，双击根目录的
 [`启动OpenGrokBot.bat`](启动OpenGrokBot.bat)。脚本自动进入项目目录，依次执行
-`pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`，前后端统一由网关提供服务
-（默认端口 4747）。保持控制台打开，打开其中打印的登录链接即可使用；按 `Ctrl+C` 停止。
+`pnpm install --frozen-lockfile`、`pnpm build`，然后启动网关，统一提供前后端服务。
+默认从端口 4747 开始（可用 `OPENGROKBOT_PORT` 指定起始端口），被占用时依次尝试下一个端口，
+直到启动成功或尝试到 65535；已有进程继续运行。保持控制台打开，使用其中打印的实际登录链接；按 `Ctrl+C` 停止。
 任何步骤失败都会显示错误并等待按键，便于排查。首次安装依赖需要联网。
 模型配置沿用 `OPENGROKBOT_*` 环境变量；双击启动会继承 Windows 用户环境变量，
 可先在 PowerShell 执行 `setx OPENGROKBOT_MODEL stub`，然后双击脚本进行离线试用。
