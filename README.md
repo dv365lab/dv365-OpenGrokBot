@@ -242,6 +242,53 @@ More in [docs/faq.md](docs/faq.md) · [docs/multi-bot.md](docs/multi-bot.md) · 
 [docs/security.md](docs/security.md) · [docs/workflows.md](docs/workflows.md) · [docs/comparison.md](docs/comparison.md) ·
 [CHANGELOG.md](CHANGELOG.md)
 
+## 联系与社区 · Contact & Community
+
+欢迎扫码添加微信、关注公众号，或加入知识星球社区。以下图片均可点击查看原图，方便扫码。
+
+### 个人微信：芯片验证日记 DV365
+
+微信名：**芯片验证日记 DV365**（中国大陆）。使用微信扫描二维码，添加好友。
+
+<a href="assets/community/wechat-dv365.jpg">
+  <img src="assets/community/wechat-dv365.jpg" alt="芯片验证日记 DV365 个人微信二维码，扫码添加好友" width="320">
+</a>
+
+### 微信公众号
+
+<table>
+  <tr>
+    <th>芯片验证日记</th>
+    <th>方圆 AI</th>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="assets/community/chip-verification-diary.jpg"><img src="assets/community/chip-verification-diary.jpg" alt="公众号《芯片验证日记》二维码" width="258"></a>
+    </td>
+    <td align="center">
+      <a href="assets/community/fangyuan-ai.jpg"><img src="assets/community/fangyuan-ai.jpg" alt="方圆 AI 公众号二维码" width="258"></a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">微信扫码，关注《芯片验证日记》。</td>
+    <td align="center">微信扫码，关注方圆 AI。</td>
+  </tr>
+</table>
+
+### 知识星球
+
+**数字芯片验证**：微信扫码加入星球。
+
+<a href="assets/community/digital-chip-verification-zsxq.jpg">
+  <img src="assets/community/digital-chip-verification-zsxq.jpg" alt="数字芯片验证知识星球，微信扫码加入星球" width="600">
+</a>
+
+**AI 学习社区**：微信扫码加入星球。
+
+<a href="assets/community/ai-learning-community-zsxq.jpg">
+  <img src="assets/community/ai-learning-community-zsxq.jpg" alt="AI 学习社区知识星球，微信扫码加入星球" width="600">
+</a>
+
 ## Disclaimer
 
 Unofficial. Not affiliated with, endorsed by, or connected to xAI or the OpenClaw Foundation. "Grok" is a
