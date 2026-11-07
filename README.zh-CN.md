@@ -135,6 +135,13 @@ Linux 用 bubblewrap），只能写这位同事自己的文件夹。Windows 没�
 想让它常驻——一个进程、一个端口、开机自启、经隧道远程访问——用 `pnpm build && pnpm start`，以及
 [docs/always-on.md](docs/always-on.md) 里的 launchd / systemd / Windows 计划任务模板。
 
+**macOS 双击启动：** 安装 Node.js 22+ 和 pnpm 后，在 Finder 中双击根目录的
+[`启动OpenGrokBot.command`](启动OpenGrokBot.command)。脚本自动进入项目目录、安装依赖、构建并启动服务
+（默认端口 4747）。打开终端中打印的登录链接即可使用；保持窗口打开，按 `Ctrl+C` 停止。
+首次安装依赖需要联网；失败时会显示错误并等待回车。若提示没有执行权限，在项目目录运行
+`chmod +x 启动OpenGrokBot.command`。模型配置沿用启动终端的 `OPENGROKBOT_*` 环境变量；
+Finder 不一定继承其他终端里的临时变量，需要指定模型时可从已配置的终端运行 `./启动OpenGrokBot.command`。
+
 **Windows 双击启动：** 安装 Node.js 22+ 和 pnpm 后，双击根目录的
 [`启动OpenGrokBot.bat`](启动OpenGrokBot.bat)。脚本自动进入项目目录，依次执行
 `pnpm install --frozen-lockfile`、`pnpm build`、`pnpm start`，前后端统一由网关提供服务
